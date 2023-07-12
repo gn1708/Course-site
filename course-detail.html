@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Course Detail</title>
+  <link rel="stylesheet" type="text/css" href="detail-styles.css">
+</head>
+<body>
+    <header>
+        <nav>
+          <h1 class="course">Nanda Course</h1>
+        </nav>
+    </header>
+  <div class="content">
+    <h1>Course Detail</h1>
+    <div id="course-detail"></div>
+
+    <h2>Add course materials</h2>
+    <form id="add-material-form">
+      <label for="material-title">Title</label>
+      <input type="text" id="material-title" required><br>
+
+      <label for="material-description">Description</label>
+      <textarea id="material-description" required></textarea><br>
+
+      <label for="material-link">Material Link</label>
+      <input type="text" id="material-link" required><br>
+
+      <button type="submit">Add</button>
+    </form>
+  </div>
+
+  <script>
+    // Mendapatkan ID kursus dari parameter URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const courseId = urlParams.get('id');
+
+    // Muat kursus dari LocalStorage berdasarkan ID
+    let courses = JSON.parse(localStorage.getItem('courses'));
+    const course = courses.find(course => course.id === Number(courseId));
+
+    // Tampilkan detail kursus
+    if (course) {
+      const courseDetail = document.getElementById('course-detail');
+      const detailHTML = `
+        <h2>${course.title}</h2>
+        <p><b>Description :</b> ${course.description}</p>
+        <p><b>Duration :</b> ${course.duration}</p>
+        <h3>Material :</h3>
+        <ul id="material-list">
+          ${course.materials.map(material => `<li><b>Title :</b> ${material.title}, <b>Description :</b> ${material.description}, <b>Material Link :</b> <a href="${material.link}" target="_blank">${material.link}</a> <br> <button onclick="editMaterial(${material.id})">Edit</button> <button onclick="deleteMaterial(${material.id})">Delete</button></li>`).join('')}
+        </ul>
+      `;
+      courseDetail.innerHTML = detailHTML;
+    }
+
+    // Event listener untuk menangani penambahan materi
+    document.getElementById('add-material-form').addEventListener('submit', function(event) {
+      event.preventDefault();
+
+      // Dapatkan nilai input dari form
+      const materialTitle = document.getElementById('material-title').value;
+      const materialDescription = document.getElementById('material-description').value;
+      const materialLink = document.getElementById('material-link').value;
+
+      // Buat objek materi baru
+      const material = {
+        id: new Date().getTime(),
+        title: materialTitle,
+        description: materialDescription,
+        link: materialLink
+      };
+
+      // Cari kursus yang sesuai berdasarkan ID
+      const targetCourse = courses.find(course => course.id === Number(courseId));
+
+      // Tambahkan materi ke kursus
+      if (targetCourse) {
+        if (!targetCourse.materials) {
+          targetCourse.materials = [];
+        }
+        targetCourse.materials.push(material);
+
+        // Simpan kembali data kursus ke LocalStorage
+        localStorage.setItem('courses', JSON.stringify(courses));
+
+        // Tampilkan ulang detail kursus dengan materi yang baru ditambahkan
+        const materialList = document.getElementById('material-list');
+        const li = document.createElement('li');
+        li.innerHTML = `<b>Title :</b> ${material.title}, <b>Description :</b> ${material.description}, <b>Material Link:</b> <a href="${material.link}" target="_blank">${material.link}</a> <button onclick="editMaterial(${material.id})">Edit</button> <button onclick="deleteMaterial(${material.id})">Delete</button>`;
+        materialList.appendChild(li);
+
+        // Reset form input
+        document.getElementById('material-title').value = '';
+        document.getElementById('material-description').value = '';
+        document.getElementById('material-link').value = '';
+      }
+    });
+
+    // Fungsi untuk mengedit materi
+    function editMaterial(materialId) {
+      const targetCourse = courses.find(course => course.id === Number(courseId));
+
+      if (targetCourse) {
+        const targetMaterial = targetCourse.materials.find(material => material.id === materialId);
+
+        if (targetMaterial) {
+          // Membuat elemen form edit materi
+          const form = document.createElement('form');
+          form.innerHTML = `
+            <label for="edit-material-title">Material Title :</label>
+            <input type="text" id="edit-material-title" value="${targetMaterial.title}" required><br>
+            
+            <label for="edit-material-description">Material Description :</label>
+            <textarea id="edit-material-description" required>${targetMaterial.description}</textarea><br>
+            
+            <label for="edit-material-link">Material Link:</label>
+            <input type="text" id="edit-material-link" value="${targetMaterial.link}" required><br>
+            
+            <button type="submit">Save</button>
+          `;
+
+          // Menangani submit form edit materi
+          form.addEventListener('submit', event => {
+            event.preventDefault();
+
+            const updatedTitle = document.getElementById('edit-material-title').value;
+            const updatedDescription = document.getElementById('edit-material-description').value;
+            const updatedLink = document.getElementById('edit-material-link').value;
+
+            // Memperbarui data materi
+            targetMaterial.title = updatedTitle;
+            targetMaterial.description = updatedDescription;
+            targetMaterial.link = updatedLink;
+
+            // Simpan kembali data kursus ke LocalStorage
+            localStorage.setItem('courses', JSON.stringify(courses));
+
+            // Perbarui tampilan detail kursus
+            showCourseDetail();
+          });
+
+          // Ganti elemen li dengan form edit materi
+          const materialList = document.getElementById('material-list');
+          const li = materialList.querySelector(`li[data-id="${materialId}"]`);
+          li.innerHTML = '';
+          li.appendChild(form);
+        }
+      }
+    }
+
+    // Fungsi untuk menghapus materi
+    function deleteMaterial(materialId) {
+      const targetCourse = courses.find(course => course.id === Number(courseId));
+
+      if (targetCourse) {
+        targetCourse.materials = targetCourse.materials.filter(material => material.id !== materialId);
+
+        // Simpan kembali data kursus ke LocalStorage
+        localStorage.setItem('courses', JSON.stringify(courses));
+
+        // Perbarui tampilan detail kursus
+        showCourseDetail();
+      }
+    }
+
+    // Fungsi untuk menampilkan ulang detail kursus
+    function showCourseDetail() {
+      const courseDetail = document.getElementById('course-detail');
+      courseDetail.innerHTML = '';
+
+      const targetCourse = courses.find(course => course.id === Number(courseId));
+
+      if (targetCourse) {
+        const detailHTML = `
+          <h2>${targetCourse.title}</h2>
+          <p><b>Description :</b> ${targetCourse.description}</p>
+          <p><b>Duration:</b> ${targetCourse.duration}</p>
+          <h3>Materi:</h3>
+          <ul id="material-list">
+            ${targetCourse.materials.map(material => `<li data-id="${material.id}"><b>Title :</b> ${material.title}, <b>Description :</b> ${material.description}, <b>Material Link:</b> <a href="${material.link}" target="_blank">${material.link}</a> <button onclick="editMaterial(${material.id})">Edit</button> <button onclick="deleteMaterial(${material.id})">Delete</button></li>`).join('')}
+          </ul>
+        `;
+        courseDetail.innerHTML = detailHTML;
+      }
+    }
+  </script>
+  <br>
+  <a class="back" href="index.html">Kembali</a>
+  <footer>
+    <p>&copy; 2023 Gusti Nanda. All rights reserved.</p>
+  </footer>
+</body>
+</html>
